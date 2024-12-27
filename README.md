@@ -10,6 +10,10 @@ local GravityButton = Instance.new("TextButton")
 local ViewButton = Instance.new("TextButton")
 local PlayerNameBox = Instance.new("TextBox")
 local ToggleButton = Instance.new("TextButton")
+local ESPButton = Instance.new("TextButton")
+local ChatButton = Instance.new("TextButton")
+local ChatDisplay = Instance.new("ScrollingFrame")
+local ChatText = Instance.new("TextLabel")
 
 -- Configurando o GUI
 ScreenGui.Name = "HubGui"
@@ -23,8 +27,9 @@ ScreenGui.Parent = playerGui
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Size = UDim2.new(0, 300, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -250)
+MainFrame.Size = UDim2.new(0, 300, 0, 550)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -275)
+MainFrame.Visible = true
 
 Title.Name = "Title"
 Title.Parent = MainFrame
@@ -72,6 +77,39 @@ PlayerNameBox.Size = UDim2.new(0, 200, 0, 50)
 PlayerNameBox.Position = UDim2.new(0.5, -100, 0, 340)
 PlayerNameBox.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 
+ESPButton.Name = "ESPButton"
+ESPButton.Parent = MainFrame
+ESPButton.Text = "Ativar ESP"
+ESPButton.Size = UDim2.new(0, 200, 0, 50)
+ESPButton.Position = UDim2.new(0.5, -100, 0, 410)
+ESPButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+
+ChatButton.Name = "ChatButton"
+ChatButton.Parent = MainFrame
+ChatButton.Text = "Ver Conversas Privadas"
+ChatButton.Size = UDim2.new(0, 200, 0, 50)
+ChatButton.Position = UDim2.new(0.5, -100, 0, 480)
+ChatButton.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
+
+ChatDisplay.Name = "ChatDisplay"
+ChatDisplay.Parent = MainFrame
+ChatDisplay.Size = UDim2.new(0, 280, 0, 150)
+ChatDisplay.Position = UDim2.new(0.5, -140, 0, 540)
+ChatDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ChatDisplay.Visible = false
+ChatDisplay.ScrollBarThickness = 10
+
+ChatText.Name = "ChatText"
+ChatText.Parent = ChatDisplay
+ChatText.Text = ""
+ChatText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ChatText.BackgroundTransparency = 1
+ChatText.Size = UDim2.new(1, 0, 1, 0)
+ChatText.TextWrapped = true
+ChatText.TextYAlignment = Enum.TextYAlignment.Top
+ChatText.Font = Enum.Font.SourceSans
+ChatText.TextSize = 14
+
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Parent = ScreenGui
 ToggleButton.Text = "CLH HUB"
@@ -86,22 +124,57 @@ ToggleButton.TextSize = 18
 local isSpeedActive = false
 local isJumpActive = false
 local isGravityActive = false
+local isESPActive = false
 
--- Função para animar transição de visibilidade
-local function animateVisibility(frame, isVisible)
-    local tweenService = game:GetService("TweenService")
-    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-    local goal = {Transparency = isVisible and 0 or 1}
+-- Função para alternar visibilidade do painel
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
 
-    for _, child in ipairs(frame:GetDescendants()) do
-        if child:IsA("GuiObject") then
-            local tween = tweenService:Create(child, tweenInfo, goal)
-            tween:Play()
+-- Função para criar ESP
+local function toggleESP()
+    if isESPActive then
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                for _, part in ipairs(player.Character:GetDescendants()) do
+                    if part:IsA("BoxHandleAdornment") and part.Name == "ESP" then
+                        part:Destroy()
+                    end
+                end
+            end
         end
+        print("ESP desativado")
+    else
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                for _, part in ipairs(player.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        local espBox = Instance.new("BoxHandleAdornment")
+                        espBox.Name = "ESP"
+                        espBox.Size = part.Size
+                        espBox.Color3 = Color3.fromRGB(255, 0, 0)
+                        espBox.AlwaysOnTop = true
+                        espBox.ZIndex = 10
+                        espBox.Adornee = part
+                        espBox.Parent = part
+                    end
+                end
+            end
+        end
+        print("ESP ativado")
     end
+    isESPActive = not isESPActive
+end
 
-    wait(0.5)
-    frame.Visible = isVisible
+-- Função para visualizar conversas privadas
+local function monitorChat()
+    game.Players.PlayerChatted:Connect(function(chatType, recipient, message)
+        if chatType == Enum.PlayerChatType.Whisper and recipient then
+            local chatLine = string.format("[%s -> %s]: %s\n", game.Players.LocalPlayer.Name, recipient.Name, message)
+            ChatText.Text = ChatText.Text .. chatLine
+        end
+    end)
+    print("Monitoramento de chat ativado!")
 end
 
 -- Adicionando funcionalidades aos botões
@@ -157,11 +230,11 @@ ViewButton.MouseButton1Click:Connect(function()
     end
 end)
 
-ToggleButton.MouseButton1Click:Connect(function()
-    animateVisibility(MainFrame, not MainFrame.Visible)
-    if MainFrame.Visible then
-        ToggleButton.Text = "Fechar"
-    else
-        ToggleButton.Text = "CLH HUB"
+ESPButton.MouseButton1Click:Connect(toggleESP)
+
+ChatButton.MouseButton1Click:Connect(function()
+    ChatDisplay.Visible = not ChatDisplay.Visible
+    if ChatDisplay.Visible then
+        monitorChat()
     end
 end)
